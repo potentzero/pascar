@@ -91,7 +91,6 @@
     display: none;
     position: absolute;
     top: 100%;
-    left: 0;
     background: var(--menu-bg);
     color: var(--menu-fg);
     border: 1px solid #000;
@@ -261,7 +260,7 @@
   #dialog-overlay.open { display: flex; }
 
   .dialog {
-    background: var(--dialog-bg);
+    background: var(--bg);
     color: var(--menu-fg);
     border: 2px solid #ffffff;
     min-width: 340px;
@@ -325,7 +324,7 @@
   .btn:hover { background: #cccccc; }
   .btn:active { box-shadow: none; transform: translate(1px, 1px); }
   .btn.primary {
-    background: #000080;
+    background: (--menu-bg);
     color: #fff;
     border-color: #fff;
   }
@@ -602,7 +601,7 @@
 (function () {
   'use strict';
  
-  // DOM References
+  // -- DOM References
   const editor      = document.getElementById('editor');
   const lineNums    = document.getElementById('line-numbers');
   const titleBar    = document.getElementById('title-bar');
@@ -625,8 +624,9 @@
   const findStatus  = document.getElementById('find-status');
   const gotoBar     = document.getElementById('goto-bar');
   const gotoInput   = document.getElementById('goto-input');
+  const menuBar     = document.getElementById('menu-bar');
  
-  // State
+  // -- State
   let fileName    = 'Untitled';
   let isModified  = false;
   let insertMode  = true;
@@ -638,28 +638,28 @@
   let notifTimer  = null;
   let replaceMode = false;
  
-  // Initial Content
+  // -- Initial Content
   editor.value = [
     'Pascar',
-    '===================================',
+    '======',
     '',
     'A faithful offline recreation of the classic MS-DOS Editor',
     'Runs entirely in your browser - no server, no internet.',
     '',
     'QUICK START',
     '-----------',
-    '  Ctrl+O          Open a text file from your computer',
-    '  Ctrl+S          Save / download the current file',
-    '  Ctrl+F          Find text',
-    '  Ctrl+H          Find and Replace',
-    '  Ctrl+G          Go to a specific line number',
-    '  F3 / Shift+F3   Find next / previous match',
-    '  F5              Insert current date and time',
-    '  Alt+F/E/S/V/H   Open menu (then ↑↓ to navigate, Enter to select)',
-    '  Alt+L           Toggle line numbers',
-    '  Ctrl++ / Ctrl+- Zoom in / out',
-    '  Insert          Toggle Insert / Overwrite mode',
-    '  F1              Show full keyboard shortcuts',
+    '  Ctrl+O            Open a text file from your computer',
+    '  Ctrl+S            Save / download the current file',
+    '  Ctrl+F            Find text',
+    '  Ctrl+H            Find and Replace',
+    '  Ctrl+G            Go to a specific line number',
+    '  F3 / Shift+F3     Find next / previous match',
+    '  F5                Insert current date and time',
+    '  Alt+F/E/S/V/H     Open menu (then ↑↓ to navigate, Enter to select)',
+    '  Alt+L             Toggle line numbers',
+    '  Ctrl++ / Ctrl--   Zoom in / out',
+    '  Insert            Toggle Insert / Overwrite mode',
+    '  F1                Show full keyboard shortcuts',
     '',
     'Start typing to edit this file.',
   ].join('\n');
@@ -667,7 +667,7 @@
   updateAll();
   editor.focus();
  
-  // Core Update Functions
+  // -- Core Update Functions
   function updateAll() {
     updateLineNumbers();
     updateStatus();
@@ -706,7 +706,7 @@
     titleBar.textContent = (isModified ? '* ' : '') + fileName + ' - Pascar';
   }
  
-  // Notifications
+  // -- Notifications
   function showNotif(msg, dur = 2500) {
     notif.textContent = msg;
     notif.classList.add('show');
@@ -714,25 +714,22 @@
     notifTimer = setTimeout(() => notif.classList.remove('show'), dur);
   }
  
-  // Editor Events
+  // -- Editor Events
   editor.addEventListener('input', () => { isModified = true; updateAll(); });
   editor.addEventListener('keyup', updateStatus);
   editor.addEventListener('click', updateStatus);
   editor.addEventListener('scroll', () => { lineNums.scrollTop = editor.scrollTop; });
  
   editor.addEventListener('keydown', (e) => {
-    // Insert / Overwrite toggle
     if (e.key === 'Insert' && !e.ctrlKey && !e.altKey) {
       insertMode = !insertMode;
       updateStatus();
       return;
     }
-    // Tab - 4 spaces
     if (e.key === 'Tab' && !e.ctrlKey && !e.altKey) {
       e.preventDefault();
       const s = editor.selectionStart, en = editor.selectionEnd;
       if (e.shiftKey) {
-        // unindent
         const lineStart = editor.value.lastIndexOf('\n', s - 1) + 1;
         const lineText  = editor.value.substring(lineStart, s);
         const spaces    = lineText.match(/^ {1,4}/);
@@ -750,14 +747,21 @@
     }
   });
  
-  // Menu keyboard navigation state
-  // Maps Alt+letter - menu name
+  // -- Menu System
   const ALT_MENU_MAP = { f: 'file', e: 'edit', s: 'search', v: 'view', h: 'help' };
-  // Maps letter - action for items within an open dropdown
-  // Built dynamically from .ul spans inside each dropdown
  
   function getOpenDropdown() {
     return document.querySelector('.dropdown.open') || null;
+  }
+ 
+  // Position the dropdown directly below its menu-item trigger
+  function positionDropdown(menuName) {
+    const item = document.querySelector(`.menu-item[data-menu="${menuName}"]`);
+    const dd   = document.getElementById('menu-' + menuName);
+    if (!item || !dd) return;
+    const itemRect   = item.getBoundingClientRect();
+    const barRect    = menuBar.getBoundingClientRect();
+    dd.style.left    = (itemRect.left - barRect.left) + 'px';
   }
  
   function openMenu(name) {
@@ -766,13 +770,12 @@
     if (!item || !dd) return;
     document.querySelectorAll('.dropdown').forEach(d => d.classList.remove('open'));
     document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('active'));
+    positionDropdown(name);
     dd.classList.add('open');
     item.classList.add('active');
-    // Highlight first non-separator item
     highlightDDItem(dd, 0);
   }
  
-  // Highlight a dd-item by index among visible (non-separator, non-disabled) items
   function getDDItems(dd) {
     return Array.from(dd.querySelectorAll('.dd-item:not(.disabled)'));
   }
@@ -790,18 +793,55 @@
     return items.findIndex(i => i.classList.contains('dd-focused'));
   }
  
-  // Global Keyboard Shortcuts
+  document.querySelectorAll('.menu-item').forEach(item => {
+    item.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const name = item.dataset.menu;
+      const dd   = document.getElementById('menu-' + name);
+      const wasOpen = dd.classList.contains('open');
+      document.querySelectorAll('.dropdown').forEach(d => d.classList.remove('open'));
+      document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('active'));
+      if (!wasOpen) {
+        positionDropdown(name);
+        dd.classList.add('open');
+        item.classList.add('active');
+      }
+    });
+    item.addEventListener('mouseenter', () => {
+      const anyOpen = document.querySelector('.dropdown.open');
+      if (anyOpen) {
+        const name = item.dataset.menu;
+        document.querySelectorAll('.dropdown').forEach(d => d.classList.remove('open'));
+        document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('active'));
+        positionDropdown(name);
+        document.getElementById('menu-' + name).classList.add('open');
+        item.classList.add('active');
+      }
+    });
+  });
+ 
+  document.querySelectorAll('.dd-item:not(.disabled)').forEach(item => {
+    item.addEventListener('click', (e) => {
+      e.stopPropagation();
+      closeAll();
+      handleAction(item.dataset.action);
+    });
+  });
+ 
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('#menu-bar')) closeAll();
+  });
+ 
+  // -- Global Keyboard Shortcuts
   document.addEventListener('keydown', (e) => {
     const ctrl  = e.ctrlKey || e.metaKey;
     const shift = e.shiftKey;
     const alt   = e.altKey;
     const key   = e.key.toLowerCase();
  
-    // Alt+letter: open a menu
     if (alt && !ctrl && ALT_MENU_MAP[key]) {
       e.preventDefault();
       const dd = getOpenDropdown();
-      // If same menu already open, close it; otherwise open the requested one
       if (dd && dd.id === 'menu-' + ALT_MENU_MAP[key]) {
         closeAll();
       } else {
@@ -810,13 +850,11 @@
       return;
     }
  
-    // Arrow navigation inside open dropdown
     const openDD = getOpenDropdown();
     if (openDD) {
       if (e.key === 'ArrowDown') {
         e.preventDefault();
-        const idx = getFocusedIndex(openDD);
-        highlightDDItem(openDD, idx + 1);
+        highlightDDItem(openDD, getFocusedIndex(openDD) + 1);
         return;
       }
       if (e.key === 'ArrowUp') {
@@ -827,19 +865,16 @@
       }
       if (e.key === 'ArrowLeft') {
         e.preventDefault();
-        // Move to previous menu
         const menus = ['file','edit','search','view','help'];
         const cur   = openDD.id.replace('menu-', '');
-        const i     = menus.indexOf(cur);
-        openMenu(menus[(i - 1 + menus.length) % menus.length]);
+        openMenu(menus[(menus.indexOf(cur) - 1 + menus.length) % menus.length]);
         return;
       }
       if (e.key === 'ArrowRight') {
         e.preventDefault();
         const menus = ['file','edit','search','view','help'];
         const cur   = openDD.id.replace('menu-', '');
-        const i     = menus.indexOf(cur);
-        openMenu(menus[(i + 1) % menus.length]);
+        openMenu(menus[(menus.indexOf(cur) + 1) % menus.length]);
         return;
       }
       if (e.key === 'Enter') {
@@ -852,11 +887,9 @@
         }
         return;
       }
-      // Letter shortcut inside menu: match underlined letter
       if (!ctrl && !alt && e.key.length === 1) {
         const letter = e.key.toLowerCase();
-        const items  = getDDItems(openDD);
-        const match  = items.find(item => {
+        const match  = getDDItems(openDD).find(item => {
           const ul = item.querySelector('.ul');
           return ul && ul.textContent.toLowerCase() === letter;
         });
@@ -883,7 +916,6 @@
     if (ctrl && key === 'f')   { e.preventDefault(); openFindBar(false); }
     if (ctrl && key === 'h')   { e.preventDefault(); openFindBar(true); }
     if (ctrl && key === 'g')   { e.preventDefault(); openGoto(); }
-    if (ctrl && key === 'a')   { /* browser default */ }
     if (ctrl && (key === '=' || key === '+')) { e.preventDefault(); zoomChange(1); }
     if (ctrl && key === '-')   { e.preventDefault(); zoomChange(-1); }
     if (ctrl && key === '0')   { e.preventDefault(); zoomReset(); }
@@ -891,7 +923,7 @@
     if (alt  && key === 'l')   { e.preventDefault(); toggleLineNumbers(); }
   });
  
-  // Close All Overlays
+  // -- Close All Overlays
   function closeAll() {
     document.querySelectorAll('.dropdown').forEach(d => d.classList.remove('open'));
     document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('active'));
@@ -907,42 +939,7 @@
     else { closeAll(); helpOverlay.classList.add('open'); }
   }
  
-  // Menu System
-  document.querySelectorAll('.menu-item').forEach(item => {
-    item.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const dd = document.getElementById('menu-' + item.dataset.menu);
-      const wasOpen = dd.classList.contains('open');
-      document.querySelectorAll('.dropdown').forEach(d => d.classList.remove('open'));
-      document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('active'));
-      if (!wasOpen) { dd.classList.add('open'); item.classList.add('active'); }
-    });
-    // Keep menu open when hovering to other menus while one is open
-    item.addEventListener('mouseenter', () => {
-      const anyOpen = document.querySelector('.dropdown.open');
-      if (anyOpen) {
-        document.querySelectorAll('.dropdown').forEach(d => d.classList.remove('open'));
-        document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('active'));
-        const dd = document.getElementById('menu-' + item.dataset.menu);
-        dd.classList.add('open');
-        item.classList.add('active');
-      }
-    });
-  });
- 
-  document.querySelectorAll('.dd-item:not(.disabled)').forEach(item => {
-    item.addEventListener('click', (e) => {
-      e.stopPropagation();
-      closeAll();
-      handleAction(item.dataset.action);
-    });
-  });
- 
-  document.addEventListener('click', (e) => {
-    if (!e.target.closest('#menu-bar')) closeAll();
-  });
- 
-  // Action Dispatcher
+  // -- Action Dispatcher
   function handleAction(a) {
     const map = {
       new:         doNew,
@@ -975,7 +972,10 @@
     if (map[a]) map[a]();
   }
  
-  // File Operations
+  // -- File Operations
+  let fileHandle = null;
+  const hasFS = typeof window.showOpenFilePicker === 'function';
+ 
   function doNew() {
     if (isModified && !confirm('Discard unsaved changes?')) return;
     editor.value = '';
@@ -985,10 +985,6 @@
     updateAll();
     editor.focus();
   }
- 
-  // File System Access API handle (Chrome/Edge only) - lets us save in-place
-  let fileHandle = null;
-  const hasFS = typeof window.showOpenFilePicker === 'function';
  
   async function doOpen() {
     if (isModified && !confirm('Discard unsaved changes?')) return;
@@ -1009,7 +1005,6 @@
         if (err.name !== 'AbortError') showNotif('Could not open file.');
       }
     } else {
-      // Fallback: classic <input type=file>
       const inp = document.createElement('input');
       inp.type = 'file';
       inp.accept = '.txt,.md,.js,.ts,.py,.html,.css,.json,.xml,.csv,.log,.c,.cpp,.h,.java,.rs,.go,.rb,.sh,.bat,.ini,.cfg,.yaml,.yml,text/*';
@@ -1033,7 +1028,6 @@
  
   async function doSave() {
     if (hasFS && fileHandle) {
-      // Write directly back to the original file - no download dialog
       try {
         const writable = await fileHandle.createWritable();
         await writable.write(editor.value);
@@ -1045,10 +1039,8 @@
         if (err.name !== 'AbortError') showNotif('Save failed: ' + err.message);
       }
     } else if (hasFS && !fileHandle) {
-      // No handle yet (new file) - show Save As picker
       await doSaveAs();
     } else {
-      // Fallback: trigger download
       _downloadFile(fileName === 'Untitled' ? 'untitled.txt' : fileName);
     }
   }
@@ -1072,11 +1064,10 @@
         if (err.name !== 'AbortError') showNotif('Save failed: ' + err.message);
       }
     } else {
-      // Fallback: ask name then download
       showDialog('Save As', `
         <label>File name:</label>
         <input type="text" id="d-savename" value="${escHtml(fileName === 'Untitled' ? 'untitled.txt' : fileName)}">
-        <div style="font-size:12px;color:#555;margin-bottom:8px;">File System Access API not supported in this browser.<br>File will be downloaded instead.</div>
+        <div style="font-size:12px;color:#aaa;margin-bottom:8px;">File System Access API not supported in this browser.<br>File will be downloaded instead.</div>
         <div class="dialog-buttons">
           <button class="btn primary" id="d-saveas-ok">Download</button>
           <button class="btn" id="d-saveas-cancel">Cancel</button>
@@ -1125,7 +1116,7 @@
     isModified = true; updateAll(); editor.focus();
   }
  
-  // View
+  // -- View
   function toggleWordWrap() {
     wordWrap = !wordWrap;
     editor.style.whiteSpace = wordWrap ? 'pre-wrap' : 'pre';
@@ -1144,26 +1135,22 @@
   }
   function zoomReset() { fontSize = 15; applyZoom(); }
   function applyZoom() {
-    editor.style.fontSize    = fontSize + 'px';
-    lineNums.style.fontSize  = fontSize + 'px';
-    editor.style.lineHeight  = lineNums.style.lineHeight = '1.25';
+    editor.style.fontSize   = fontSize + 'px';
+    lineNums.style.fontSize = fontSize + 'px';
+    editor.style.lineHeight = lineNums.style.lineHeight = '1.25';
     updateLineNumbers();
     showNotif(`Zoom: ${fontSize}px`);
   }
  
-  // Find / Replace Bar
+  // -- Find / Replace Bar
   function openFindBar(withReplace) {
     replaceMode = withReplace;
     closeAll();
     findBar.classList.add('open');
- 
-    // Toggle replace row
     document.getElementById('replace-label').style.display = withReplace ? '' : 'none';
     replInput.style.display = withReplace ? '' : 'none';
     document.getElementById('btn-replace-one').style.display = withReplace ? '' : 'none';
     document.getElementById('btn-replace-all').style.display = withReplace ? '' : 'none';
-    document.getElementById('find-label').textContent = withReplace ? 'Find:' : 'Find:';
- 
     findInput.value = lastSearch;
     replInput.value = lastReplace;
     findStatus.textContent = '';
@@ -1252,12 +1239,12 @@
   }
  
   function scrollToSelection() {
-    const lines    = editor.value.substring(0, editor.selectionStart).split('\n');
-    const lineH    = editor.scrollHeight / Math.max(1, editor.value.split('\n').length);
+    const lines = editor.value.substring(0, editor.selectionStart).split('\n');
+    const lineH = editor.scrollHeight / Math.max(1, editor.value.split('\n').length);
     editor.scrollTop = Math.max(0, (lines.length - 5) * lineH);
   }
  
-  // Go to Line
+  // -- Go to Line
   function openGoto() {
     closeAll();
     gotoBar.classList.add('open');
@@ -1275,8 +1262,8 @@
   function execGoto() {
     const n = parseInt(gotoInput.value, 10);
     if (isNaN(n) || n < 1) { showNotif('Enter a valid line number.'); return; }
-    const lines  = editor.value.split('\n');
-    const lineN  = Math.min(n, lines.length);
+    const lines = editor.value.split('\n');
+    const lineN = Math.min(n, lines.length);
     let pos = 0;
     for (let i = 0; i < lineN - 1; i++) pos += lines[i].length + 1;
     editor.setSelectionRange(pos, pos);
@@ -1288,12 +1275,11 @@
     showNotif(`Jumped to line ${lineN}`);
   }
  
-  // Dialog Helper
+  // -- Dialog Helper
   function showDialog(title, bodyHTML, onReady) {
     dialogTitle.textContent = title;
     dialogBody.innerHTML    = bodyHTML;
     dialogOv.classList.add('open');
-    // Run callback after DOM is updated so getElementById finds the elements
     if (onReady) onReady();
   }
  
@@ -1301,14 +1287,14 @@
     if (e.target === dialogOv) closeAll();
   });
  
-  // About Dialog
+  // -- About Dialog
   function showAbout() {
     showDialog('About Pascar', `
       <div style="text-align:center;padding:8px 0 4px;">
         <div style="font-size:22px;font-weight:bold;margin-bottom:6px;letter-spacing:1px;">Pascar</div>
-        <div style="margin-bottom:4px;font-size:14px;">MSDOS Editor Browser Edition - Offline Recreation</div>
-        <div style="color:#555;font-size:12px;margin-bottom:14px;">Inspired by the classic MS-DOS TUI text editor</div>
-        <div style="font-size:12px;color:#333;line-height:1.6;">
+        <div style="margin-bottom:4px;font-size:14px;">Browser based offline text editor</div>
+        <div style="color:#7f7f7f;font-size:12px;margin-bottom:14px;">Inspired by the classic MS-DOS editor</div>
+        <div style="font-size:12px;color:#fff;line-height:1.6;">
           Runs 100% offline in your browser.<br>
           No server. No data sent anywhere.<br>
           Open &amp; save files via your local filesystem.
@@ -1321,19 +1307,17 @@
     });
   }
  
-  // Utility
+  // -- Utility
   function escHtml(s) {
     return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
  
-  // Prevent browser zoom from interfering with Ctrl+0/+/-
   window.addEventListener('keydown', (e) => {
     if ((e.ctrlKey || e.metaKey) && (e.key === '0' || e.key === '+' || e.key === '=' || e.key === '-')) {
       e.preventDefault();
     }
   }, { capture: true });
  
-  // Warn before closing with unsaved changes
   window.addEventListener('beforeunload', (e) => {
     if (isModified) {
       e.preventDefault();
