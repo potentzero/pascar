@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pascar-v1';
+const CACHE_NAME = 'pascar';
 const ASSETS = [
   './',   
   'index.html',
