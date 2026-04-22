@@ -1,21 +1,43 @@
-const CACHE_NAME = 'pascar';
+const CACHE_NAME = 'pascar-v1';
 const ASSETS = [
+  './',   
   'index.html',
   'manifest.json'
 ];
 
-// Install: Cache the files
 self.addEventListener('install', (e) => {
+  self.skipWaiting();
   e.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS))
+    caches.open(CACHE_NAME).then((cache) => {
+      console.log('Caching assets');
+      return cache.addAll(ASSETS);
+    })
   );
 });
 
-// Fetch: Serve from cache if offline
+self.addEventListener('activate', (e) => {
+  e.waitUntil(
+    Promise.all([
+      clients.claim(),
+      caches.keys().then((keys) => {
+        return Promise.all(
+          keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key))
+        );
+      })
+    ])
+  );
+});
+
 self.addEventListener('fetch', (e) => {
   e.respondWith(
     caches.match(e.request).then((response) => {
+      // Return cached version OR fetch from network
       return response || fetch(e.request);
+    }).catch(() => {
+      // Fallback for when both cache and network fail
+      if (e.request.mode === 'navigate') {
+        return caches.match('index.html');
+      }
     })
   );
 });
