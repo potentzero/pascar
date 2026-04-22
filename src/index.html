@@ -822,6 +822,7 @@
  
   document.querySelectorAll('.dd-item:not(.disabled)').forEach(item => {
     item.addEventListener('click', (e) => {
+      e.preventDefault();
       e.stopPropagation();
       closeAll();
       handleAction(item.dataset.action);
@@ -829,7 +830,7 @@
   });
  
   document.addEventListener('click', (e) => {
-    if (!e.target.closest('#menu-bar')) closeAll();
+    if (e.target.closest('#menu-bar')) closeAll();
   });
  
   // -- Global Keyboard Shortcuts
@@ -880,6 +881,14 @@
       if (e.key === 'Enter') {
         e.preventDefault();
         const focused = openDD.querySelector('.dd-item.dd-focused');
+        if (findBar.classList.contains('open')
+          && gotoBar.classList.contains('open')
+          && helpOverlay.classList.contains('open')
+          && dialogOv.classList.contains('open')) {
+            e.preventDefault();
+            e.stopPropagation();
+            return;
+        }
         if (focused && focused.dataset.action) {
           const action = focused.dataset.action;
           closeAll();
@@ -1158,17 +1167,17 @@
   }
  
   findInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter')  { e.preventDefault(); syncSearch(); doFindNext(e.shiftKey ? -1 : 1); }
+    if (e.key === 'Enter')  { e.preventDefault(); e.stopPropagation(); syncSearch(); doFindNext(e.shiftKey ? -1 : 1); }
     if (e.key === 'Escape') closeAll();
   });
   replInput.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') closeAll();
   });
  
-  document.getElementById('btn-find-next').onclick  = () => { syncSearch(); doFindNext(1); };
-  document.getElementById('btn-find-prev').onclick  = () => { syncSearch(); doFindNext(-1); };
-  document.getElementById('btn-replace-one').onclick = () => { syncSearch(); doReplaceOne(); };
-  document.getElementById('btn-replace-all').onclick = () => { syncSearch(); doReplaceAll(); };
+  document.getElementById('btn-find-next').onclick  = (e) => { e.preventDefault(); e.stopPropagation(); syncSearch(); doFindNext(1); };
+  document.getElementById('btn-find-prev').onclick  = (e) => { e.preventDefault(); e.stopPropagation(); syncSearch(); doFindNext(-1); };
+  document.getElementById('btn-replace-one').onclick = (e) => { e.preventDefault(); e.stopPropagation(); syncSearch(); doReplaceOne(); };
+  document.getElementById('btn-replace-all').onclick = (e) => { e.preventDefault(); e.stopPropagation(); syncSearch(); doReplaceAll(); };
   document.getElementById('btn-find-close').onclick  = closeAll;
  
   function syncSearch() {
@@ -1280,15 +1289,17 @@
     dialogTitle.textContent = title;
     dialogBody.innerHTML    = bodyHTML;
     dialogOv.classList.add('open');
+    dialogOv.addEventListener('keydown', (e) => {
+      e.preventDefault();
+    });
+    dialogOv.addEventListener('click', (e) => {
+      e.preventDefault();
+    });
     if (onReady) onReady();
   }
  
-  dialogOv.addEventListener('click', (e) => {
-    if (e.target === dialogOv) closeAll();
-  });
- 
   // -- About Dialog
-  function showAbout() {
+  function showAbout(e) {
     showDialog('About Pascar', `
       <div style="text-align:center;padding:8px 0 4px;">
         <div style="font-size:22px;font-weight:bold;margin-bottom:6px;letter-spacing:1px;">Pascar</div>
@@ -1302,7 +1313,6 @@
       </div>
       <div class="dialog-buttons"><button class="btn primary" id="d-about-ok">OK</button></div>
     `, () => {
-      document.getElementById('d-about-ok').focus();
       document.getElementById('d-about-ok').addEventListener('click', closeAll);
     });
   }
