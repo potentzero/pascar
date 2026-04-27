@@ -1609,6 +1609,7 @@
                   }
                 });
               inp.addEventListener("keydown", (e) => {
+                e.stopPropagation();
                 if (e.key === "Enter")
                   document.getElementById("d-saveas-ok").click();
               });
