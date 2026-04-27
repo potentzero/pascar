@@ -1196,7 +1196,13 @@
       });
 
       document.addEventListener("click", (e) => {
-        if (e.target.closest("#menu-bar")) closeAll();
+        // If the click is inside the menu-bar, do not close all
+        if (e.target.closest("#menu-bar")) return;
+
+        // If any menu-item or dropdown is open, close all
+        if (document.querySelectorAll('.menu-item.active, .dropdown.open').length > 0) {
+          closeAll();
+        }
       });
 
       // -- Global Keyboard Shortcuts
