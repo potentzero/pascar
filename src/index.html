@@ -1902,6 +1902,10 @@
           e.preventDefault();
         });
         dialogOv.addEventListener("click", (e) => {
+          if (e.target.id == "source-code-link") {
+            window.open("https://github.com/potentzero/pascar", "_blank");
+            return;
+          }
           e.preventDefault();
         });
         if (onReady) onReady();
@@ -1922,7 +1926,7 @@
               Open &amp; save files via your local filesystem.
             </div>
             <div style="font-size:14px;line-height:1.6;text-align:center;">
-              <a style="color:#295991;" href="https://github.com/potentzero/pascar" target="_blank">Source code</a>
+              <a id="source-code-link" style="color:#295991;" href="https://github.com/potentzero/pascar" target="_blank">Source code</a>
               by Nirmal Kumar R.
             </div>
             <div class="dialog-buttons"><button class="btn primary" id="d-about-ok">OK</button></div>
